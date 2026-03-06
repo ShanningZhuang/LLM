@@ -12,44 +12,42 @@ Standard attention computes `softmax(QK^T)V` in O(n^2 d) time. **Linear attentio
 
 ### Standard Attention
 
-```
-For query q_i, the output is:
+For query \( \mathbf{q}_i \), the output is:
 
-            Σ_j exp(q_i^T k_j) v_j
-  o_i  =  ─────────────────────────
-            Σ_j exp(q_i^T k_j)
+$$
+\mathbf{o}_i = \frac{\sum_j \exp(\mathbf{q}_i^\top \mathbf{k}_j) \, \mathbf{v}_j}{\sum_j \exp(\mathbf{q}_i^\top \mathbf{k}_j)}
+$$
 
-The exp(q_i^T k_j) couples q_i and k_j through softmax → must compute all n² pairs.
-```
+The \( \exp(\mathbf{q}_i^\top \mathbf{k}_j) \) couples \( \mathbf{q}_i \) and \( \mathbf{k}_j \) through softmax — must compute all \( n^2 \) pairs.
 
 ### The Kernel Trick (Katharopoulos et al., 2020)
 
-Replace `exp(q^T k)` with `φ(q)^T φ(k)` for some feature map φ:
+Replace \( \exp(\mathbf{q}^\top \mathbf{k}) \) with \( \phi(\mathbf{q})^\top \phi(\mathbf{k}) \) for some feature map \( \phi \):
 
-```
-            Σ_j φ(q_i)^T φ(k_j) v_j       φ(q_i)^T  Σ_j φ(k_j) v_j^T
-  o_i  =  ──────────────────────────  =   ──────────────────────────────
-            Σ_j φ(q_i)^T φ(k_j)            φ(q_i)^T  Σ_j φ(k_j)
+$$
+\mathbf{o}_i = \frac{\sum_j \phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j) \, \mathbf{v}_j}{\sum_j \phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j)} = \frac{\phi(\mathbf{q}_i)^\top \sum_j \phi(\mathbf{k}_j) \mathbf{v}_j^\top}{\phi(\mathbf{q}_i)^\top \sum_j \phi(\mathbf{k}_j)} = \frac{\phi(\mathbf{q}_i)^\top S}{\phi(\mathbf{q}_i)^\top \mathbf{z}}
+$$
 
-                    φ(q_i)^T  S
-        =          ──────────────        where S = Σ_j φ(k_j) v_j^T
-                    φ(q_i)^T  z                  z = Σ_j φ(k_j)
-```
+where \( S = \sum_j \phi(\mathbf{k}_j) \mathbf{v}_j^\top \) and \( \mathbf{z} = \sum_j \phi(\mathbf{k}_j) \).
 
-**Key insight**: S and z are cumulative sums — they don't depend on i. We compute them once, then each o_i is just a matrix-vector product.
+**Key insight**: \( S \) and \( \mathbf{z} \) are cumulative sums — they don't depend on \( i \). We compute them once, then each \( \mathbf{o}_i \) is just a matrix-vector product.
 
 ### Dual Forms
 
-```
-Parallel form (training):          Recurrent form (inference):
-─────────────────────              ─────────────────────────
-O = φ(Q) · (φ(K)^T V)             S_t = S_{t-1} + φ(k_t) v_t^T
-                                   z_t = z_{t-1} + φ(k_t)
-Time: O(n d²)                     o_t = S_t φ(q_t) / (z_t^T φ(q_t))
-      (matrix multiply,
-       right-to-left)              Time: O(d²) per step → O(n d²) total
-                                   Memory: O(d²) constant state!
-```
+**Parallel form** (training):
+
+$$
+O = \phi(Q) \cdot \left( \phi(K)^\top V \right) \qquad \text{Time: } O(nd^2) \text{ (right-to-left matmul)}
+$$
+
+**Recurrent form** (inference):
+
+$$
+S_t = S_{t-1} + \phi(\mathbf{k}_t) \mathbf{v}_t^\top, \qquad \mathbf{z}_t = \mathbf{z}_{t-1} + \phi(\mathbf{k}_t), \qquad \mathbf{o}_t = \frac{S_t \, \phi(\mathbf{q}_t)}{\mathbf{z}_t^\top \phi(\mathbf{q}_t)}
+$$
+
+- Time: \( O(d^2) \) per step \( \to O(nd^2) \) total
+- Memory: \( O(d^2) \) constant state
 
 This duality is fundamental: same computation, two execution strategies. The parallel form is efficient for training (GPU-friendly), while the recurrent form enables O(1) per-token inference.
 
@@ -57,16 +55,19 @@ This duality is fundamental: same computation, two execution strategies. The par
 
 ## The Hidden State as Associative Memory
 
-The state `S_t = Σ_{j≤t} φ(k_j) v_j^T` is a **key-value associative memory**:
+The state \( S_t = \sum_{j \leq t} \phi(\mathbf{k}_j) \mathbf{v}_j^\top \) is a **key-value associative memory**:
 
-```
-Writing: S_t = S_{t-1} + φ(k_t) v_t^T     ← "store v_t at address k_t"
-Reading: o_t = S_t φ(q_t)                   ← "retrieve value at address q_t"
+$$
+\text{Writing: } S_t = S_{t-1} + \phi(\mathbf{k}_t) \mathbf{v}_t^\top \quad \leftarrow \text{"store } \mathbf{v}_t \text{ at address } \mathbf{k}_t\text{"}
+$$
 
-S_t ∈ ℝ^{d_v × d_k} — a matrix that stores ALL key-value pairs seen so far
-```
+$$
+\text{Reading: } \mathbf{o}_t = S_t \, \phi(\mathbf{q}_t) \quad \leftarrow \text{"retrieve value at address } \mathbf{q}_t\text{"}
+$$
 
-This is why the recurrent state size is d_v × d_k (typically 64×64 = 4096 per head), independent of sequence length. Compare with softmax attention's KV cache which grows as O(n × d).
+\( S_t \in \mathbb{R}^{d_v \times d_k} \) — a matrix that stores all key-value pairs seen so far.
+
+This is why the recurrent state size is \( d_v \times d_k \) (typically 64×64 = 4096 per head), independent of sequence length. Compare with softmax attention's KV cache which grows as \( O(n \times d) \).
 
 ### The Forgetting Problem
 
@@ -84,12 +85,19 @@ This limitation motivates every subsequent model: RWKV adds decay, Mamba adds se
 
 RWKV (Receptance Weighted Key Value) introduces **exponential decay** to the recurrence:
 
-```
-Standard linear attention:    S_t = S_{t-1} + k_t v_t^T
-RWKV-style:                   S_t = Λ ⊙ S_{t-1} + k_t v_t^T
+Standard linear attention:
 
-where Λ is a diagonal matrix of channel-wise decay rates (learned, fixed after training)
-```
+$$
+S_t = S_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top
+$$
+
+RWKV-style:
+
+$$
+S_t = \Lambda \odot S_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top
+$$
+
+where \( \Lambda \) is a diagonal matrix of channel-wise decay rates (learned, fixed after training).
 
 This gives recent tokens more influence than distant ones — a simple but effective form of forgetting. RWKV also introduces:
 
@@ -105,14 +113,15 @@ RWKV achieves competitive perplexity with pure Transformers while maintaining O(
 
 RetNet (Retentive Network) proposes **retention** as a dual of attention:
 
-```
-Retention:  S_t = γ · S_{t-1} + k_t v_t^T      (γ = scalar decay, typically per-head)
+$$
+\text{Retention: } S_t = \gamma \cdot S_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top \qquad (\gamma = \text{scalar decay, typically per-head})
+$$
 
 Three computation modes:
-1. Parallel:    O = (Q K^T ⊙ D) V      where D is a causal decay mask
-2. Recurrent:   S_t = γ S_{t-1} + k_t v_t^T;  o_t = q_t^T S_t
-3. Chunk-wise:  Parallel within chunks, recurrent across chunks
-```
+
+1. **Parallel:** \( O = (QK^\top \odot D) V \) where \( D \) is a causal decay mask
+2. **Recurrent:** \( S_t = \gamma \, S_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top; \quad \mathbf{o}_t = \mathbf{q}_t^\top S_t \)
+3. **Chunk-wise:** Parallel within chunks, recurrent across chunks
 
 The chunk-wise mode is particularly important: it enables GPU-efficient training (parallel within fixed-size chunks) while maintaining the linear recurrence across chunks. This pattern recurs in GLA, Mamba-2, and Gated DeltaNet.
 

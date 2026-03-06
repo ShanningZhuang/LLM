@@ -10,15 +10,16 @@ Modern LLMs are moving beyond pure softmax attention. A family of **linear atten
 
 All these models share a single recurrence:
 
-```
-S_t = α_t · (S_{t-1} - β_t · S_{t-1} k_t k_t^T) + v_t k_t^T
+$$
+S_t = \alpha_t \cdot \left( S_{t-1} - \beta_t \cdot S_{t-1} \mathbf{k}_t \mathbf{k}_t^\top \right) + \mathbf{v}_t \mathbf{k}_t^\top
+$$
 
 where:
-  S_t ∈ ℝ^{d_v × d_k}   — matrix-valued hidden state (associative memory)
-  k_t, v_t               — key and value at step t
-  α_t                    — decay/forgetting gate (scalar or diagonal)
-  β_t                    — delta-rule correction strength
-```
+
+- \( S_t \in \mathbb{R}^{d_v \times d_k} \) — matrix-valued hidden state (associative memory)
+- \( \mathbf{k}_t, \mathbf{v}_t \) — key and value at step \( t \)
+- \( \alpha_t \) — decay/forgetting gate (scalar or diagonal)
+- \( \beta_t \) — delta-rule correction strength
 
 By setting different combinations of α and β, you get every model in this family:
 

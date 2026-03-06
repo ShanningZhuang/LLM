@@ -216,7 +216,7 @@ The head dimension determines state size:
 
 | Aspect | Mamba-1 | Mamba-2 |
 |--------|---------|---------|
-| State | Vector x ∈ ℝ^N | Matrix S ∈ ℝ^{d_v × d_k} |
+| State | Vector x ∈ ℝ^N | Matrix S ∈ ℝ^(d_v × d_k) |
 | Decay | Diagonal (per-dim) | Scalar (per-head) |
 | Training | Parallel scan | Chunk-wise SSD |
 | Speed (training) | Fast | **8× faster** |
