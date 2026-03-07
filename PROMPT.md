@@ -83,7 +83,15 @@ Content...
 - Use ASCII diagrams for architecture/flow visualization
 - Add practical examples and use cases
 - Structure content from fundamentals to advanced
-- Include mathematical formulas where appropriate
+- **Math & Equations**: Always use LaTeX math notation, never code blocks for equations
+  - Inline math: `$x = y + z$` renders as math, not code
+  - Display math: use `$$` blocks for standalone equations
+  - Example — write `$L = -\sum_{t} \log P(x_t | x_{<t})$` instead of putting equations in ``` code fences
+  - Use `\text{}` for words inside math: `$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{CE}} + \lambda \mathcal{L}_{\text{KL}}$`
+  - Common patterns:
+    - Softmax: `$\text{softmax}(x_i) = \frac{e^{x_i}}{\sum_j e^{x_j}}$`
+    - Attention: `$\text{Attention}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$`
+    - Loss functions: `$$\mathcal{L} = -\mathbb{E}_{x \sim p_{\text{data}}} [\log D(x)] - \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))]$$`
 ```
 
 ---
