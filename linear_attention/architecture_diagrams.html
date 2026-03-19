@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Attention Block Architectures</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e0e0e8;
+    --muted: #8888a0;
+    --accent-blue: #5b8def;
+    --accent-green: #4ecdc4;
+    --accent-orange: #f4a261;
+    --accent-purple: #a78bfa;
+    --accent-pink: #f472b6;
+    --accent-red: #ef6461;
+    --node-bg: #22253a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 2rem 1rem;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Tab navigation */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { border-color: var(--accent-blue); color: var(--text); }
+  .tab-btn.active {
+    background: var(--accent-blue);
+    color: #fff;
+    border-color: var(--accent-blue);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Block diagrams */
+  .diagram-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .diagram-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .diagram-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  /* Flow blocks */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .node {
+    background: var(--node-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 1.4rem;
+    text-align: center;
+    font-size: 0.85rem;
+    min-width: 200px;
+    position: relative;
+  }
+  .node .label { font-weight: 600; }
+  .node .detail { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+  .node.proj   { border-color: var(--accent-blue);   background: rgba(91,141,239,0.08); }
+  .node.act    { border-color: var(--accent-green);   background: rgba(78,205,196,0.08); }
+  .node.core   { border-color: var(--accent-orange);  background: rgba(244,162,97,0.10); }
+  .node.norm   { border-color: var(--accent-purple);  background: rgba(167,139,250,0.08); }
+  .node.gate   { border-color: var(--accent-pink);    background: rgba(244,114,182,0.08); }
+  .node.io     { border-color: var(--muted);          background: rgba(136,136,160,0.06); }
+  .node.resid  { border-color: var(--accent-red); background: rgba(239,100,97,0.08); border-style: dashed; }
+
+  .arrow {
+    width: 2px;
+    height: 22px;
+    background: var(--border);
+    position: relative;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: -4px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--border);
+  }
+
+  /* Parallel branches */
+  .parallel {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .branch-label {
+    font-size: 0.75rem;
+    color: var(--accent-blue);
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Merge connector */
+  .merge-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .merge-line {
+    width: 60%;
+    height: 2px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* Side-by-side comparison */
+  .side-by-side {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .side-panel {
+    flex: 1;
+    min-width: 280px;
+    max-width: 420px;
+  }
+  .side-panel .diagram-title { font-size: 1.05rem; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem auto 0;
+    padding: 1rem;
+    background: var(--card);
+    border-radius: 10px;
+    max-width: 700px;
+    border: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1.5px solid;
+  }
+
+  /* Hybrid stack */
+  .hybrid-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1rem;
+  }
+  .hybrid-block {
+    padding: 0.5rem 2rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    min-width: 240px;
+    text-align: center;
+    border: 1.5px solid;
+  }
+  .hybrid-block.attn-block {
+    background: rgba(91,141,239,0.12);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+  }
+  .hybrid-block.linear-block {
+    background: rgba(244,162,97,0.12);
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+  }
+  .hybrid-block.mlp-block {
+    background: rgba(78,205,196,0.08);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+  .hybrid-arrow {
+    width: 2px; height: 10px; background: var(--border);
+  }
+
+  .note-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-orange);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-top: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .note-box strong { color: var(--text); }
+
+  .equation {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 1.2rem;
+    margin: 1rem auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    max-width: 600px;
+    text-align: center;
+    color: var(--accent-green);
+  }
+</style>
+</head>
+<body>
+
+<h1>Linear Attention Block Architectures</h1>
+<p class="subtitle">How the neural network blocks are actually wired — not just the math</p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('transformer')">Transformer</button>
+  <button class="tab-btn" onclick="showTab('mamba')">Mamba</button>
+  <button class="tab-btn" onclick="showTab('deltanet')">Gated DeltaNet</button>
+  <button class="tab-btn" onclick="showTab('compare')">Side-by-Side</button>
+  <button class="tab-btn" onclick="showTab('hybrid')">Hybrid Architecture</button>
+</div>
+
+<!-- =========== TRANSFORMER =========== -->
+<div id="transformer" class="tab-content active">
+  <div class="diagram-container">
+    <div class="diagram-title">Standard Transformer Block (Llama-style)</div>
+    <div class="diagram-desc">
+      The baseline you already know. A pre-norm block with multi-head softmax attention followed by a SwiGLU MLP.
+      Every token attends to all previous tokens via a full KV cache — O(L²) during training, O(L) KV cache per token at inference.
+    </div>
+    <div class="flow">
+      <div class="node io"><span class="label">Input x</span><span class="detail">shape: (L, d)</span></div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual</span></div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span></div>
+      <div class="arrow"></div>
+      <div class="parallel">
+        <div class="branch">
+          <div class="branch-label">Q</div>
+          <div class="node proj"><span class="label">W_q · x</span><span class="detail">→ (L, d)</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label">K</div>
+          <div class="node proj"><span class="label">W_k · x</span><span class="detail">→ (L, d)</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label">V</div>
+          <div class="node proj"><span class="label">W_v · x</span><span class="detail">→ (L, d)</span></div>
+        </div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node core" style="min-width:320px;">
+        <span class="label">Multi-Head Softmax Attention</span>
+        <span class="detail">softmax(QK<sup>T</sup>/√d) · V → O(L²) attention matrix</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="node proj"><span class="label">W_o · output</span><span class="detail">output projection</span></div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual</span></div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span></div>
+      <div class="arrow"></div>
+      <div class="node act" style="min-width:280px;">
+        <span class="label">SwiGLU MLP</span>
+        <span class="detail">SiLU(W₁x) ⊙ W₃x → W₂ · (channel mixing)</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual → Output</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- =========== MAMBA =========== -->
+<div id="mamba" class="tab-content">
+  <div class="diagram-container">
+    <div class="diagram-title">Mamba Block (S6 / Selective SSM)</div>
+    <div class="diagram-desc">
+      Mamba replaces <em>both</em> attention and MLP with a single gated SSM block.
+      The input splits into two paths: one goes through Conv→SSM (the "content" path), the other is a simple SiLU gate.
+      The SSM uses input-dependent B, C, Δ parameters (selectivity). During inference, only a fixed-size state h is maintained — no KV cache.
+    </div>
+    <div class="flow">
+      <div class="node io"><span class="label">Input x</span><span class="detail">shape: (L, d)</span></div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span></div>
+      <div class="arrow"></div>
+      <div class="node proj" style="min-width:300px;">
+        <span class="label">Linear ↑ expand</span>
+        <span class="detail">d → 2·d_inner (expand factor E, typically 2×)</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="parallel">
+        <div class="branch" style="min-width:220px;">
+          <div class="branch-label">Content Path</div>
+          <div class="node act">
+            <span class="label">Conv1d (k=4)</span>
+            <span class="detail">depthwise, causal padding</span>
+          </div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">SiLU activation</span></div>
+          <div class="arrow"></div>
+          <div class="node proj">
+            <span class="label">Project → B, C, Δ</span>
+            <span class="detail">input-dependent SSM params</span>
+          </div>
+          <div class="arrow"></div>
+          <div class="node core" style="min-width:210px;">
+            <span class="label">Selective Scan (SSM)</span>
+            <span class="detail">h_t = Ā_t h_{t-1} + B̄_t x_t<br>y_t = C_t · h_t</span>
+          </div>
+        </div>
+        <div class="branch" style="min-width:150px;">
+          <div class="branch-label">Gate Path</div>
+          <div class="node gate" style="margin-top:0px;">
+            <span class="label">SiLU</span>
+            <span class="detail">element-wise gate</span>
+          </div>
+        </div>
+      </div>
+      <div class="merge-zone">
+        <div class="merge-line"></div>
+        <div class="node gate" style="min-width:280px;">
+          <span class="label">⊙ Element-wise Multiply</span>
+          <span class="detail">content × gate</span>
+        </div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node proj">
+        <span class="label">Linear ↓ project</span>
+        <span class="detail">d_inner → d</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual → Output</span></div>
+    </div>
+    <div class="note-box">
+      <strong>Key insight:</strong> Mamba has no separate MLP block — the gated SSM replaces both attention and FFN.
+      Each Mamba layer is essentially one block, not attention+MLP. The "gate path" plays the role of the GLU gating
+      that would normally be inside an MLP.
+    </div>
+  </div>
+</div>
+
+<!-- =========== GATED DELTANET =========== -->
+<div id="deltanet" class="tab-content">
+  <div class="diagram-container">
+    <div class="diagram-title">Gated DeltaNet Block (Token Mixing)</div>
+    <div class="diagram-desc">
+      Gated DeltaNet follows the Llama-style layout: a <strong>token mixing</strong> layer (Gated DeltaNet replacing attention)
+      followed by a <strong>SwiGLU MLP</strong> for channel mixing. The token mixing block projects Q, K, V plus two scalar gates (α, β),
+      applies short convolutions and normalization, then runs the gated delta rule recurrence.
+    </div>
+    <div class="flow">
+      <div class="node io"><span class="label">Input x</span><span class="detail">shape: (L, d)</span></div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual</span></div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span></div>
+      <div class="arrow"></div>
+
+      <!-- Projections -->
+      <div class="parallel">
+        <div class="branch">
+          <div class="branch-label">Q path</div>
+          <div class="node proj"><span class="label">W_q · x</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">Conv1d (k=4)</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">SiLU</span></div>
+          <div class="arrow"></div>
+          <div class="node norm"><span class="label">L₂ Norm</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label">K path</div>
+          <div class="node proj"><span class="label">W_k · x</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">Conv1d (k=4)</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">SiLU</span></div>
+          <div class="arrow"></div>
+          <div class="node norm"><span class="label">L₂ Norm</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label">V path</div>
+          <div class="node proj"><span class="label">W_v · x</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">Conv1d (k=4)</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">SiLU</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label">Gates</div>
+          <div class="node gate"><span class="label">α = σ(W_α · x)</span><span class="detail">decay gate ∈ (0,1)</span></div>
+          <div class="arrow"></div>
+          <div class="node gate"><span class="label">β = σ(W_β · x)</span><span class="detail">update rate ∈ (0,1)</span></div>
+        </div>
+      </div>
+      <div class="arrow"></div>
+
+      <!-- Core recurrence -->
+      <div class="node core" style="min-width:400px; padding: 0.8rem 1.4rem;">
+        <span class="label">Gated Delta Rule (State Update)</span>
+        <span class="detail" style="display:block; margin-top:6px; font-family: 'Courier New', monospace; font-size:0.8rem; line-height:1.7; color: var(--accent-green);">
+          S_t = α_t · (I − β_t · k_t k_t<sup>T</sup>) · S_{t-1} + β_t · v_t k_t<sup>T</sup><br>
+          o_t = S_t · q_t
+        </span>
+        <span class="detail" style="display:block; margin-top:6px;">
+          Fixed state S ∈ ℝ<sup>d_v × d_k</sup> — no KV cache growth
+        </span>
+      </div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span><span class="detail">on output before projection</span></div>
+      <div class="arrow"></div>
+
+      <!-- Output gate -->
+      <div class="parallel">
+        <div class="branch">
+          <div class="node proj"><span class="label">W_o · output</span></div>
+        </div>
+        <div class="branch">
+          <div class="branch-label" style="color:var(--accent-pink)">Output Gate</div>
+          <div class="node gate"><span class="label">SiLU(W_g · x)</span></div>
+        </div>
+      </div>
+      <div class="merge-zone">
+        <div class="merge-line"></div>
+        <div class="node gate"><span class="label">⊙ Gate × Output</span></div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual</span></div>
+      <div class="arrow"></div>
+      <div class="node norm"><span class="label">RMSNorm</span></div>
+      <div class="arrow"></div>
+      <div class="node act" style="min-width:280px;">
+        <span class="label">SwiGLU MLP</span>
+        <span class="detail">channel mixing (same as Transformer)</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="node resid"><span class="label">+ Residual → Output</span></div>
+    </div>
+
+    <div class="note-box">
+      <strong>Why these components matter:</strong><br>
+      • <strong>Short Conv1d</strong> — captures local n-gram patterns (like "New York") that the recurrence alone would miss; enables induction heads in a single layer.<br>
+      • <strong>L₂ Norm on Q, K</strong> — when β=1 and ‖k‖₂=1, the matrix (I − kk<sup>T</sup>) becomes a projection that cleanly erases one direction in memory.<br>
+      • <strong>α gate</strong> — global forgetting (topic shifts, document boundaries).<br>
+      • <strong>β gate</strong> — surgical update strength (how aggressively to overwrite a specific memory slot).<br>
+      • <strong>Output RMSNorm</strong> — replaces the unstable 1/Σ normalizer from original linear attention.
+    </div>
+  </div>
+</div>
+
+<!-- =========== SIDE BY SIDE =========== -->
+<div id="compare" class="tab-content">
+  <div class="diagram-container">
+    <div class="diagram-title">Token Mixing: Attention vs Mamba vs Gated DeltaNet</div>
+    <div class="diagram-desc">
+      All three are "token mixing" layers — they let tokens communicate across sequence positions. The key differences are in
+      <strong>how</strong> they mix and <strong>what state</strong> they maintain.
+    </div>
+
+    <div class="side-by-side">
+      <!-- Transformer -->
+      <div class="side-panel">
+        <div class="diagram-title" style="color:var(--accent-blue)">Softmax Attention</div>
+        <div class="flow">
+          <div class="node io"><span class="label">x</span></div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Q, K, V projections</span></div>
+          <div class="arrow"></div>
+          <div class="node core" style="min-width:180px">
+            <span class="label">softmax(QK<sup>T</sup>/√d)·V</span>
+            <span class="detail">L×L attention matrix</span>
+          </div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Output proj</span></div>
+          <div class="arrow"></div>
+          <div class="node io"><span class="label">output</span></div>
+        </div>
+        <div class="equation">
+          State: KV cache<br>
+          grows O(L) per layer<br>
+          Train: O(L²d)<br>
+          Infer step: O(Ld)
+        </div>
+      </div>
+
+      <!-- Mamba -->
+      <div class="side-panel">
+        <div class="diagram-title" style="color:var(--accent-green)">Mamba (SSM)</div>
+        <div class="flow">
+          <div class="node io"><span class="label">x</span></div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Linear ↑ expand</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">Conv1d → SiLU</span></div>
+          <div class="arrow"></div>
+          <div class="node core" style="min-width:180px">
+            <span class="label">Selective Scan</span>
+            <span class="detail">h = αh + Bx; y = Ch</span>
+          </div>
+          <div class="arrow"></div>
+          <div class="node gate"><span class="label">⊙ SiLU gate</span></div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Linear ↓ project</span></div>
+          <div class="arrow"></div>
+          <div class="node io"><span class="label">output</span></div>
+        </div>
+        <div class="equation">
+          State: h ∈ ℝ<sup>N</sup> per channel<br>
+          fixed O(Ed·N) per layer<br>
+          Train: O(LdN)<br>
+          Infer step: O(dN)
+        </div>
+      </div>
+
+      <!-- Gated DeltaNet -->
+      <div class="side-panel">
+        <div class="diagram-title" style="color:var(--accent-orange)">Gated DeltaNet</div>
+        <div class="flow">
+          <div class="node io"><span class="label">x</span></div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Q, K, V, α, β</span></div>
+          <div class="arrow"></div>
+          <div class="node act"><span class="label">Conv1d → SiLU → L₂</span></div>
+          <div class="arrow"></div>
+          <div class="node core" style="min-width:180px">
+            <span class="label">Gated Delta Rule</span>
+            <span class="detail">S = α(I−βkk<sup>T</sup>)S + βvk<sup>T</sup></span>
+          </div>
+          <div class="arrow"></div>
+          <div class="node gate"><span class="label">RMSNorm → ⊙ gate</span></div>
+          <div class="arrow"></div>
+          <div class="node proj"><span class="label">Output proj</span></div>
+          <div class="arrow"></div>
+          <div class="node io"><span class="label">output</span></div>
+        </div>
+        <div class="equation">
+          State: S ∈ ℝ<sup>d_v×d_k</sup> per head<br>
+          fixed O(d²) per layer<br>
+          Train: O(Ld²) chunkwise<br>
+          Infer step: O(d²)
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <strong>The fundamental tradeoff:</strong>
+      Softmax attention stores every past token (perfect recall, expensive).
+      Mamba compresses into a vector h (cheap, but information gets "smudged").
+      Gated DeltaNet compresses into a matrix S (richer than a vector — can surgically overwrite specific associations —
+      but still fixed size). The matrix state S is essentially an associative memory that maps keys to values.
+    </div>
+  </div>
+</div>
+
+<!-- =========== HYBRID =========== -->
+<div id="hybrid" class="tab-content">
+  <div class="diagram-container">
+    <div class="diagram-title">Hybrid Architecture (e.g., Qwen 3.5)</div>
+    <div class="diagram-desc">
+      Production models don't use just one block type. They <strong>interleave</strong> linear attention layers with a few
+      softmax attention layers in a repeating pattern. A typical ratio is 3:1 — three Gated DeltaNet blocks for every one
+      sliding window attention block.
+    </div>
+
+    <div class="side-by-side">
+      <div class="side-panel">
+        <div class="diagram-title" style="font-size:0.95rem;">Pure Transformer (32 layers)</div>
+        <div class="hybrid-stack">
+          <div class="hybrid-block attn-block">Attention + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block">Attention + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block">Attention + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block">Attention + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block" style="opacity:0.5">⋮ × 28 more</div>
+        </div>
+        <div class="equation" style="font-size:0.8rem">
+          KV cache: 32 layers × O(L)<br>
+          All layers O(L²) training
+        </div>
+      </div>
+
+      <div class="side-panel">
+        <div class="diagram-title" style="font-size:0.95rem;">Hybrid 3:1 (32 layers)</div>
+        <div class="hybrid-stack">
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block">Sliding Window Attn + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block">Gated DeltaNet + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block attn-block">Sliding Window Attn + MLP</div>
+          <div class="hybrid-arrow"></div>
+          <div class="hybrid-block linear-block" style="opacity:0.5">⋮ repeat pattern</div>
+        </div>
+        <div class="equation" style="font-size:0.8rem">
+          KV cache: only 8 attn layers<br>
+          24 layers fixed-state O(d²)<br>
+          ~75% less KV cache memory
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <strong>Why hybrid works best:</strong><br>
+      • <strong>Linear layers</strong> (Gated DeltaNet / Mamba) handle the bulk of computation efficiently — O(1) per token at inference, good at tracking slow-changing context.<br>
+      • <strong>Attention layers</strong> (sliding window or global) provide exact retrieval over a local window — catching details the compressed state might miss.<br>
+      • The DeltaNet paper found that adding just 2 global attention layers to a 24-layer model <em>surpassed</em> a full Transformer in retrieval benchmarks.<br>
+      • Qwen 3.5, Jamba, and Samba all use variants of this pattern in production.
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-blue); background:rgba(91,141,239,0.15)"></div> Linear Projection</div>
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-green); background:rgba(78,205,196,0.15)"></div> Activation / Conv</div>
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-orange); background:rgba(244,162,97,0.15)"></div> Core Operation</div>
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-purple); background:rgba(167,139,250,0.15)"></div> Normalization</div>
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-pink); background:rgba(244,114,182,0.15)"></div> Gating</div>
+  <div class="legend-item"><div class="legend-swatch" style="border-color:var(--accent-red); background:rgba(239,100,97,0.15); border-style:dashed"></div> Residual</div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
