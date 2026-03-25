@@ -7,6 +7,8 @@
 
 ```
 ┌─────────────────────────────────────────────┐
+│       Post-Training & Alignment             │  ← PPO / DPO / GRPO
+├─────────────────────────────────────────────┤
 │           Generation & Decoding             │  ← Output
 ├─────────────────────────────────────────────┤
 │              Training                       │
@@ -209,6 +211,37 @@
 
 ---
 
+## Phase 10: Post-Training & Alignment
+
+### 10.1 RL Foundations for LLMs → [Notes](post_training/01_RL_Foundations_for_LLMs.md)
+- [ ] MDP mapping: robotics → LLM (state, action, reward)
+- [ ] Policy gradient theorem (REINFORCE) derivation
+- [ ] SAC vs PPO: why continuous control RL doesn't transfer directly
+
+### 10.2 PPO for LLMs → [Notes](post_training/02_PPO.md)
+- [ ] RLHF objective and KL penalty
+- [ ] Clipped surrogate objective (step-by-step)
+- [ ] GAE for advantage estimation
+- [ ] The 4-model setup and training loop
+
+### 10.3 Reward Models → [Notes](post_training/03_Reward_Models.md)
+- [ ] Bradley-Terry model and RM training
+- [ ] Process vs Outcome reward models
+
+### 10.4 DPO & Variants → [Notes](post_training/04_DPO_and_Variants.md)
+- [ ] DPO derivation (optimal policy → direct loss)
+- [ ] IPO, KTO, ORPO, SimPO
+
+### 10.5 GRPO & Modern Methods → [Notes](post_training/05_GRPO_and_Modern_Methods.md)
+- [ ] Group normalization replaces value function
+- [ ] DeepSeek-R1: pure RL without SFT
+
+### 10.6 Reading RL Math → [Notes](post_training/06_Reading_RL_Math.md)
+- [ ] Symbol reference table (π, θ, E, ∇, σ, KL, etc.)
+- [ ] How to parse paper equations step by step
+
+---
+
 ## Priority Matrix
 
 | Topic | Priority | Depth |
@@ -224,6 +257,7 @@
 | Scaling Laws | ★★★☆☆ | Conceptual |
 | MoE | ★★★☆☆ | Conceptual |
 | Linear Attention & Hybrid | ★★★★☆ | Deep |
+| Post-Training & Alignment | ★★★★★ | Deep |
 
 ---
 
@@ -239,3 +273,7 @@
 8. **GQA**: "GQA: Training Generalized Multi-Query Transformers" (Ainslie et al., 2023)
 9. **SwiGLU**: "GLU Variants Improve Transformer" (Shazeer, 2020)
 10. **MoE**: "Outrageously Large Neural Networks: The Sparsely-Gated MoE Layer" (Shazeer et al., 2017)
+11. **PPO**: "Proximal Policy Optimization Algorithms" (Schulman et al., 2017)
+12. **RLHF**: "Training Language Models to Follow Instructions with Human Feedback" (Ouyang et al., 2022)
+13. **DPO**: "Direct Preference Optimization" (Rafailov et al., 2023)
+14. **GRPO**: "DeepSeekMath: Pushing the Limits of Mathematical Reasoning" (Shao et al., 2024)
